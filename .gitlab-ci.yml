@@ -11,6 +11,8 @@ variables:
 build:linux:
   stage: build
   image: $GO_VERSION_IMAGE
+  tags:
+    - filanko-runner
   script:
     # VERSION: tag → "<tag>-fleet"; otherwise describe + "-fleet"
     - VERSION="$(git describe --tags --exact-match 2>/dev/null || git describe --tags 2>/dev/null || echo dev)-fleet"
