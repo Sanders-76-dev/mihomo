@@ -1,0 +1,24 @@
+# GitLab CI — build patched mihomo binaries for gateway nodes.
+# This file lives on the GitLab-only `main` branch; it is NOT pushed to GitHub.
+
+stages:
+  - build
+
+variables:
+  # keep the tag in sync with upstream (go.mod: go 1.20, builds fine on 1.26)
+  GO_VERSION_IMAGE: golang:1.26-bookworm
+
+build:linux:
+  stage: build
+  image: $GO_VERSION_IMAGE
+  script:
+    # VERSION: tag → "<tag>-fleet"; otherwise describe + "-fleet"
+    - VERSION="$(git describe --tags --exact-match 2>/dev/null || git describe --tags 2>/dev/null || echo dev)-fleet"
+    - echo "Building mihomo $VERSION"
+    - make VERSION="$VERSION" linux-amd64 linux-arm64
+    - ls -la bin/
+  artifacts:
+    name: "mihomo-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - bin/*.gz
+    expire_in: 30 days
