@@ -26,6 +26,7 @@ import (
 func configRouter() http.Handler {
 	r := chi.NewRouter()
 	r.Get("/", getConfigs)
+	r.Get("/file", getConfigFile)
 	if !embedMode { // disallow update/patch configs in embed mode
 		r.Put("/", updateConfigs)
 		r.Put("/file", updateConfigFile)
@@ -439,6 +440,25 @@ func updateConfigs(w http.ResponseWriter, r *http.Request) {
 
 	executor.ApplyConfig(cfg, force)
 	render.NoContent(w, r)
+}
+
+// getConfigFile returns the raw config file from disk (verbatim, comments
+// included) — the counterpart to PUT /configs/file. GET /configs only exposes
+// the parsed *running* general settings (no proxies/rules/dns), which is not
+// enough for remote config management.
+func getConfigFile(w http.ResponseWriter, r *http.Request) {
+	cfgPath := C.Path.Resolve(C.Path.Config())
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		log.Errorln("[CONFIG] read config from %s failed: %v", cfgPath, err)
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, newError(err.Error()))
+		return
+	}
+	render.JSON(w, r, map[string]string{
+		"path":    cfgPath,
+		"payload": string(data),
+	})
 }
 
 // updateConfigFile validates a full configuration given as inline payload,
